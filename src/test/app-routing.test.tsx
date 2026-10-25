@@ -48,4 +48,10 @@ describe("App routing", () => {
 
     await waitFor(() => expect(container.firstChild).not.toBeNull());
   });
+
+  it("renders the workspace home without crashing", async () => {
+    const { getByText } = renderAt("/");
+
+    await waitFor(() => expect(getByText(/Good afternoon/i)).toBeInTheDocument());
+  });
 });
