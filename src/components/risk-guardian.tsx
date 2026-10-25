@@ -89,8 +89,8 @@ const changeTypeOf:Record<string,string>={"RA-2304":"New product","RA-2301":"New
 function AiBranchBanner() {
   return (
     <div className="border-b border-ai/30 bg-ai/10 px-4 py-2 text-center text-[11px] text-ai lg:pl-64">
-      <b>aibranch</b> — live Anthropic extraction, drafting, follow-up, and re-review. Residual scores stay deterministic in code.
-      Set <code className="rounded bg-surface px-1">ANTHROPIC_API_KEY</code> in <code className="rounded bg-surface px-1">.env</code>.
+      <b>aibranch</b> — live Cursor/Anthropic extraction, drafting, follow-up, and re-review. Residual scores stay deterministic in code.
+      Set <code className="rounded bg-surface px-1">CURSOR_API_KEY</code> (or <code className="rounded bg-surface px-1">ANTHROPIC_API_KEY</code>) in <code className="rounded bg-surface px-1">.env</code>.
     </div>
   );
 }

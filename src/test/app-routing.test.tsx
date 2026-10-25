@@ -36,4 +36,16 @@ describe("App routing", () => {
 
     await waitFor(() => expect(container.firstChild).not.toBeNull());
   });
+
+  it("renders the new assessment route", async () => {
+    const { container } = renderAt("/new-assessment");
+
+    await waitFor(() => expect(container.firstChild).not.toBeNull());
+  });
+
+  it("renders an assessment detail route", async () => {
+    const { container } = renderAt("/assessment/RA-2304");
+
+    await waitFor(() => expect(container.firstChild).not.toBeNull());
+  });
 });

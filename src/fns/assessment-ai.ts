@@ -68,11 +68,42 @@ export type AiAnalysisResult = {
 
 type AnthropicContentBlock = { type: string; text?: string };
 
+function resolvedModelLabel(): string {
+  if (process.env.CURSOR_API_KEY) {
+    return `cursor:${process.env.CURSOR_MODEL ?? "claude-sonnet-4-6"}`;
+  }
+  return process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-20250514";
+}
+
+async function callCursorJson(system: string, user: string): Promise<string> {
+  const apiKey = process.env.CURSOR_API_KEY;
+  if (!apiKey) {
+    throw new Error("CURSOR_API_KEY is not set.");
+  }
+
+  const modelId = process.env.CURSOR_MODEL ?? "claude-sonnet-4-6";
+  const { Agent } = await import("@cursor/sdk");
+  const result = await Agent.prompt(
+    `[SYSTEM]\n${system}\n\n[USER]\n${user}\n\nRespond with JSON only, no markdown unless fenced.`,
+    {
+      apiKey,
+      model: { id: modelId },
+      cloud: { repos: [] },
+    },
+  );
+
+  if (result.status !== "finished" || !result.result?.trim()) {
+    throw new Error(result.error?.message ?? "Cursor agent returned no text.");
+  }
+
+  return result.result.trim();
+}
+
 async function callAnthropicJson(system: string, user: string): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "ANTHROPIC_API_KEY is not set. Add it to .env for live AI on the aibranch.",
+      "Set CURSOR_API_KEY or ANTHROPIC_API_KEY in .env for live AI on aibranch.",
     );
   }
 
@@ -104,6 +135,13 @@ async function callAnthropicJson(system: string, user: string): Promise<string> 
   const text = payload.content?.find((b) => b.type === "text")?.text?.trim();
   if (!text) throw new Error("Anthropic returned an empty response.");
   return text;
+}
+
+async function callLlmJson(system: string, user: string): Promise<string> {
+  if (process.env.CURSOR_API_KEY) {
+    return callCursorJson(system, user);
+  }
+  return callAnthropicJson(system, user);
 }
 
 function extractJsonObject(text: string): unknown {
@@ -199,9 +237,9 @@ Respond with JSON only:
   }]
 }`;
 
-    const raw = await callAnthropicJson(buildAnalysisSystemPrompt(), userPrompt);
+    const raw = await callLlmJson(buildAnalysisSystemPrompt(), userPrompt);
     const parsed = analysisJsonSchema.parse(extractJsonObject(raw));
-    const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-20250514";
+    const model = resolvedModelLabel();
 
     return {
       ...parsed,
@@ -231,7 +269,7 @@ Recommended control: ${finding.control}
 
 Question: ${data.question}`;
 
-    const raw = await callAnthropicJson(system, user);
+    const raw = await callLlmJson(system, user);
     const parsed = z
       .object({
         answer: z.string().min(1).max(1500),
@@ -241,7 +279,7 @@ Question: ${data.question}`;
 
     return {
       ...parsed,
-      model: process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-20250514",
+      model: resolvedModelLabel(),
     };
   });
 
@@ -269,7 +307,7 @@ Original reason: ${finding.reason}
 Evidence: ${finding.evidence}
 Analyst note to reconsider: ${data.analystNote}`;
 
-    const raw = await callAnthropicJson(system, user);
+    const raw = await callLlmJson(system, user);
     const parsed = z
       .object({
         level: z.enum(["Critical", "High", "Medium", "Low"]),
