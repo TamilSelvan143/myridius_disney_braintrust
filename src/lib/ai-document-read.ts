@@ -24,7 +24,12 @@ export async function readFileForAiAnalysis(file: File): Promise<AiDocumentPaylo
   try {
     const asText = await file.text();
     const sample = asText.slice(0, 400);
-    const mostlyText = sample.length > 40 && !/[\x00-\x08\x0e-\x1f]/.test(sample);
+    const mostlyText =
+      sample.length > 40 &&
+      !sample.split("").some((char) => {
+        const code = char.charCodeAt(0);
+        return code <= 0x08 || (code >= 0x0e && code <= 0x1f);
+      });
     if (mostlyText) {
       return { name: file.name, mimeType, content: asText.slice(0, 50_000) };
     }

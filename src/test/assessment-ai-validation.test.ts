@@ -27,7 +27,9 @@ describe("assessment AI input validation", () => {
       changeType: "New product",
       owner: "A. Mensah",
       changeSummary: "New corporate card spending rules.",
-      documents: [{ name: "brief.pdf", mimeType: "text/plain", content: "Section 1\nLimit $5000." }],
+      documents: [
+        { name: "brief.pdf", mimeType: "text/plain", content: "Section 1\nLimit $5000." },
+      ],
     });
     expect(parsed.documents).toHaveLength(1);
   });

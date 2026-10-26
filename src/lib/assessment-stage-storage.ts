@@ -1,10 +1,5 @@
 export type StoredAssessmentStage =
-  | "Uploaded"
-  | "AI analysis"
-  | "Analyst review"
-  | "Needs information"
-  | "Committee"
-  | "Decision";
+  "Uploaded" | "AI analysis" | "Analyst review" | "Needs information" | "Committee" | "Decision";
 
 const key = "risk-workbench-stage";
 

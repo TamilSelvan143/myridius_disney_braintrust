@@ -1,11 +1,18 @@
 console.error("[smoke-ai] starting…");
 
-import { createServer } from "vite";
+import { createServer, loadEnv } from "vite";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(root, "..");
+
+const envFromFile = loadEnv("development", projectRoot, "");
+for (const [key, value] of Object.entries(envFromFile)) {
+  if (process.env[key] === undefined) {
+    process.env[key] = value;
+  }
+}
 
 const vite = await createServer({
   configFile: path.join(projectRoot, "vite.config.ts"),

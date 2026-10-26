@@ -5,7 +5,11 @@ const KEY = "raw-notifications";
 const EVT = "raw-notifications-change";
 
 function load(): Notice[] {
-  try { return JSON.parse(localStorage.getItem(KEY) ?? "[]") as Notice[]; } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(KEY) ?? "[]") as Notice[];
+  } catch {
+    return [];
+  }
 }
 function save(n: Notice[]) {
   localStorage.setItem(KEY, JSON.stringify(n.slice(0, 50)));
@@ -14,8 +18,12 @@ function save(n: Notice[]) {
 export function notify(text: string) {
   save([{ id: crypto.randomUUID(), text, at: new Date().toISOString(), read: false }, ...load()]);
 }
-export function markAllRead() { save(load().map(n => ({ ...n, read: true }))); }
-export function clearAll() { save([]); }
+export function markAllRead() {
+  save(load().map((n) => ({ ...n, read: true })));
+}
+export function clearAll() {
+  save([]);
+}
 export function useNotifications() {
   const [list, setList] = useState<Notice[]>([]);
   useEffect(() => {
@@ -23,7 +31,10 @@ export function useNotifications() {
     r();
     window.addEventListener(EVT, r);
     window.addEventListener("storage", r);
-    return () => { window.removeEventListener(EVT, r); window.removeEventListener("storage", r); };
+    return () => {
+      window.removeEventListener(EVT, r);
+      window.removeEventListener("storage", r);
+    };
   }, []);
   return list;
 }

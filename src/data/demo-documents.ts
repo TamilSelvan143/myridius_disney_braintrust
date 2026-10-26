@@ -57,8 +57,6 @@ export function demoDocumentsAsAiPayload() {
   return demoAssessmentDocuments.map((doc) => ({
     name: doc.name,
     mimeType: "text/plain",
-    content: doc.sections
-      .map((s) => `${s.title}\n${s.body.join("\n")}`)
-      .join("\n\n"),
+    content: doc.sections.map((s) => `${s.title}\n${s.body.join("\n")}`).join("\n\n"),
   }));
 }

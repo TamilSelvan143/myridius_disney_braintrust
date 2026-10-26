@@ -68,20 +68,24 @@ export type AiAnalysisResult = {
 
 type AnthropicContentBlock = { type: string; text?: string };
 
+function envVar(name: string): string | undefined {
+  return process.env[name];
+}
+
 function resolvedModelLabel(): string {
-  if (process.env.CURSOR_API_KEY) {
-    return `cursor:${process.env.CURSOR_MODEL ?? "claude-sonnet-4-6"}`;
+  if (envVar("CURSOR_API_KEY")) {
+    return `cursor:${envVar("CURSOR_MODEL") ?? "claude-sonnet-4-6"}`;
   }
-  return process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-20250514";
+  return envVar("ANTHROPIC_MODEL") ?? "claude-sonnet-4-20250514";
 }
 
 async function callCursorJson(system: string, user: string): Promise<string> {
-  const apiKey = process.env.CURSOR_API_KEY;
+  const apiKey = envVar("CURSOR_API_KEY");
   if (!apiKey) {
     throw new Error("CURSOR_API_KEY is not set.");
   }
 
-  const modelId = process.env.CURSOR_MODEL ?? "claude-sonnet-4-6";
+  const modelId = envVar("CURSOR_MODEL") ?? "claude-sonnet-4-6";
   const { Agent } = await import("@cursor/sdk");
   const result = await Agent.prompt(
     `[SYSTEM]\n${system}\n\n[USER]\n${user}\n\nRespond with JSON only, no markdown unless fenced.`,
@@ -100,14 +104,12 @@ async function callCursorJson(system: string, user: string): Promise<string> {
 }
 
 async function callAnthropicJson(system: string, user: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = envVar("ANTHROPIC_API_KEY");
   if (!apiKey) {
-    throw new Error(
-      "Set CURSOR_API_KEY or ANTHROPIC_API_KEY in .env for live AI on aibranch.",
-    );
+    throw new Error("Set CURSOR_API_KEY or ANTHROPIC_API_KEY in .env for live AI on aibranch.");
   }
 
-  const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-20250514";
+  const model = envVar("ANTHROPIC_MODEL") ?? "claude-sonnet-4-20250514";
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -138,7 +140,7 @@ async function callAnthropicJson(system: string, user: string): Promise<string> 
 }
 
 async function callLlmJson(system: string, user: string): Promise<string> {
-  if (process.env.CURSOR_API_KEY) {
+  if (envVar("CURSOR_API_KEY")) {
     return callCursorJson(system, user);
   }
   return callAnthropicJson(system, user);

@@ -11,7 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
+import { reportBoundaryError } from "../lib/runtime-error-reporting";
 
 function NotFoundComponent() {
   return (
@@ -39,7 +39,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    reportBoundaryError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
   return (
@@ -82,7 +82,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Evidence-led risk assessment and governance workspace." },
       { name: "author", content: "Risk Assessment Workbench" },
       { property: "og:title", content: "Risk Assessment Workbench" },
-      { property: "og:description", content: "Evidence-led risk assessment and governance workspace." },
+      {
+        property: "og:description",
+        content: "Evidence-led risk assessment and governance workspace.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

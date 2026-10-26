@@ -1,10 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { loadAiAnalysis } from "@/lib/ai-analysis-storage";
-import {
-  loadAssessmentStage,
-  saveAssessmentStage,
-} from "@/lib/assessment-stage-storage";
+import { loadAssessmentStage, saveAssessmentStage } from "@/lib/assessment-stage-storage";
 
 afterEach(() => {
   sessionStorage.removeItem("risk-workbench-stage");
