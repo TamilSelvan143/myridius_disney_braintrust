@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
-    "smoke:ai": "npx vite-node scripts/smoke-ai-runner.mts"
+    "smoke:ai": "npx vite-node scripts/smoke-ai-runner.mts",
+    "verify:ai": "npx vite-node scripts/verify-ai-analysis.mts"
   },
   "overrides": {
     "rolldown": "1.2.1"

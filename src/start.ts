@@ -1,6 +1,8 @@
 import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
+// Eagerly register server function modules for dev (avoids "Invalid server function ID" on first call).
+import "./fns/assessment-ai";
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {

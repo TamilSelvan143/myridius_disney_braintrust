@@ -12,6 +12,14 @@ export default defineConfig(({ command, mode }) => {
     envDefine[`import.meta.env.${key}`] = JSON.stringify(value);
   }
 
+  // Server functions read process.env (CURSOR_API_KEY, ANTHROPIC_API_KEY, …).
+  const serverEnv = loadEnv(mode, process.cwd(), "");
+  for (const [key, value] of Object.entries(serverEnv)) {
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+
   const plugins: PluginOption[] = [
     tailwindcss(),
     tsconfigPaths({ projects: ["./tsconfig.json"] }),

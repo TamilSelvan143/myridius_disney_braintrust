@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { policyCorpus, riskFactorTaxonomy } from "@/data/governance";
+import { textFromCursorRun } from "@/lib/cursor-agent-text";
 
 const documentSchema = z.object({
   name: z.string().min(1).max(255),
@@ -87,20 +88,19 @@ async function callCursorJson(system: string, user: string): Promise<string> {
 
   const modelId = envVar("CURSOR_MODEL") ?? "claude-sonnet-4-6";
   const { Agent } = await import("@cursor/sdk");
-  const result = await Agent.prompt(
-    `[SYSTEM]\n${system}\n\n[USER]\n${user}\n\nRespond with JSON only, no markdown unless fenced.`,
-    {
-      apiKey,
-      model: { id: modelId },
-      cloud: { repos: [] },
-    },
-  );
+  const agent = await Agent.create({
+    apiKey,
+    model: { id: modelId },
+    cloud: { repos: [] },
+  });
 
-  if (result.status !== "finished" || !result.result?.trim()) {
-    throw new Error(result.error?.message ?? "Cursor agent returned no text.");
+  try {
+    const prompt = `[SYSTEM]\n${system}\n\n[USER]\n${user}\n\nRespond with JSON only, no markdown unless fenced.`;
+    const run = await agent.send(prompt);
+    return await textFromCursorRun(run);
+  } finally {
+    await agent.close();
   }
-
-  return result.result.trim();
 }
 
 async function callAnthropicJson(system: string, user: string): Promise<string> {
@@ -148,8 +148,17 @@ async function callLlmJson(system: string, user: string): Promise<string> {
 
 function extractJsonObject(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const raw = fenced?.[1]?.trim() ?? text.trim();
-  return JSON.parse(raw);
+  const candidate = fenced?.[1]?.trim() ?? text.trim();
+  try {
+    return JSON.parse(candidate);
+  } catch {
+    const start = candidate.indexOf("{");
+    const end = candidate.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(candidate.slice(start, end + 1));
+    }
+    throw new Error("AI response did not contain valid JSON.");
+  }
 }
 
 const analysisJsonSchema = z.object({
@@ -202,17 +211,17 @@ Every finding must include evidence quoting or paraphrasing an uploaded document
 Do not invent facts not supported by the documents or the change summary.`;
 }
 
-export const analyzeAssessmentWithAi = createServerFn({ method: "POST" })
-  .validator((data: unknown) => analyzeInput.parse(data))
-  .handler(async ({ data }): Promise<AiAnalysisResult> => {
-    const docBlock = data.documents
-      .map(
-        (d, i) =>
-          `--- Document ${i + 1}: ${d.name} (${d.mimeType}) ---\n${d.content.slice(0, 12_000)}`,
-      )
-      .join("\n\n");
+export async function performAssessmentAnalysis(
+  data: z.infer<typeof analyzeInput>,
+): Promise<AiAnalysisResult> {
+  const docBlock = data.documents
+    .map(
+      (d, i) =>
+        `--- Document ${i + 1}: ${d.name} (${d.mimeType}) ---\n${d.content.slice(0, 12_000)}`,
+    )
+    .join("\n\n");
 
-    const userPrompt = `Assessment ${data.assessmentId}
+  const userPrompt = `Assessment ${data.assessmentId}
 Title: ${data.title}
 Change type: ${data.changeType}
 Owner: ${data.owner}
@@ -239,16 +248,20 @@ Respond with JSON only:
   }]
 }`;
 
-    const raw = await callLlmJson(buildAnalysisSystemPrompt(), userPrompt);
-    const parsed = analysisJsonSchema.parse(extractJsonObject(raw));
-    const model = resolvedModelLabel();
+  const raw = await callLlmJson(buildAnalysisSystemPrompt(), userPrompt);
+  const parsed = analysisJsonSchema.parse(extractJsonObject(raw));
+  const model = resolvedModelLabel();
 
-    return {
-      ...parsed,
-      model,
-      generatedAt: new Date().toISOString(),
-    };
-  });
+  return {
+    ...parsed,
+    model,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+export const analyzeAssessmentWithAi = createServerFn({ method: "POST" })
+  .validator((data: unknown) => analyzeInput.parse(data))
+  .handler(async ({ data }) => performAssessmentAnalysis(data));
 
 export const askAssessmentFollowUp = createServerFn({ method: "POST" })
   .validator((data: unknown) => followUpInput.parse(data))
