@@ -68,6 +68,10 @@ export default defineConfig(({ command, mode }) => {
     server: {
       host: "::",
       port: 8080,
+      headers: {
+        "Content-Security-Policy": "frame-ancestors 'self'",
+        "X-Frame-Options": "SAMEORIGIN",
+      },
     },
     plugins,
   };

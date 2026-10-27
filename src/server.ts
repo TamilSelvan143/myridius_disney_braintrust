@@ -44,18 +44,33 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+/** Prevent third-party hosts (e.g. Lovable preview) from framing the app and overlaying editor chrome. */
+function withFrameProtection(response: Response): Response {
+  const headers = new Headers(response.headers);
+  headers.set("Content-Security-Policy", "frame-ancestors 'self'");
+  headers.set("X-Frame-Options", "SAMEORIGIN");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const normalized = await normalizeCatastrophicSsrResponse(response);
+      return withFrameProtection(normalized);
     } catch (error) {
       console.error(error);
-      return new Response(renderErrorPage(), {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
+      return withFrameProtection(
+        new Response(renderErrorPage(), {
+          status: 500,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+      );
     }
   },
 };
