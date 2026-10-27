@@ -45,3 +45,10 @@ export function registerSubmittedAssessment(record: SubmittedAssessmentRecord) {
 export function getSubmittedAssessment(id: string): SubmittedAssessmentRecord | undefined {
   return loadSubmittedAssessments().find((r) => r.id === id);
 }
+
+export function removeSubmittedAssessment(id: string) {
+  if (typeof sessionStorage === "undefined") return;
+  const next = loadSubmittedAssessments().filter((r) => r.id !== id);
+  sessionStorage.setItem(key, JSON.stringify(next));
+  notify();
+}

@@ -37,3 +37,11 @@ export function saveAssessmentStage(assessmentId: string, stage: StoredAssessmen
   sessionStorage.setItem(key, serialized);
   notify();
 }
+
+export function removeAssessmentStage(assessmentId: string) {
+  if (typeof sessionStorage === "undefined") return;
+  const next = { ...readAll() };
+  delete next[assessmentId];
+  sessionStorage.setItem(key, JSON.stringify(next));
+  notify();
+}

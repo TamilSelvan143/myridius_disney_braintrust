@@ -106,7 +106,7 @@ async function callCursorJson(system: string, user: string): Promise<string> {
 async function callAnthropicJson(system: string, user: string): Promise<string> {
   const apiKey = envVar("ANTHROPIC_API_KEY");
   if (!apiKey) {
-    throw new Error("Set CURSOR_API_KEY or ANTHROPIC_API_KEY in .env for live AI on aibranch.");
+    throw new Error("Set CURSOR_API_KEY or ANTHROPIC_API_KEY in .env for live AI analysis.");
   }
 
   const model = envVar("ANTHROPIC_MODEL") ?? "claude-sonnet-4-20250514";

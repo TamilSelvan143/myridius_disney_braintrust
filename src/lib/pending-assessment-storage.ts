@@ -35,3 +35,8 @@ export function loadPendingAssessment(): PendingAssessmentPayload | null {
     return null;
   }
 }
+
+export function clearPendingAssessment() {
+  if (typeof sessionStorage === "undefined") return;
+  sessionStorage.removeItem(key);
+}

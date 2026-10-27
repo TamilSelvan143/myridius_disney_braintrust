@@ -38,11 +38,17 @@ import {
   useSyncExternalStore,
 } from "react";
 import { demoAssessmentDocuments, demoDocumentsAsAiPayload } from "@/data/demo-documents";
-import { loadAiAnalysis, saveAiAnalysis } from "@/lib/ai-analysis-storage";
+import { clearAiAnalysis, loadAiAnalysis, saveAiAnalysis } from "@/lib/ai-analysis-storage";
+import { nextAssessmentId } from "@/lib/assessment-id";
 import { readFileForAiAnalysis } from "@/lib/ai-document-read";
-import { loadPendingAssessment, savePendingAssessment } from "@/lib/pending-assessment-storage";
+import {
+  clearPendingAssessment,
+  loadPendingAssessment,
+  savePendingAssessment,
+} from "@/lib/pending-assessment-storage";
 import {
   loadAssessmentStage,
+  removeAssessmentStage,
   saveAssessmentStage,
   subscribeAssessmentStages,
 } from "@/lib/assessment-stage-storage";
@@ -50,6 +56,7 @@ import {
   getSubmittedAssessment,
   loadSubmittedAssessments,
   registerSubmittedAssessment,
+  removeSubmittedAssessment,
   subscribeSubmittedAssessments,
   type SubmittedAssessmentRecord,
 } from "@/lib/submitted-assessments-storage";
@@ -95,18 +102,6 @@ type Assessment = {
 };
 
 export const assessments: Assessment[] = [
-  {
-    id: "RA-2310",
-    title: "New geography — mobile corridors (MX · NG)",
-    risk: "Medium",
-    stage: "Uploaded",
-    due: "New",
-    owner: "Product — Digital Banking",
-    summary:
-      "Use New Assessment to attach your geography brief, or Start AI analysis after submit.",
-    file: "geography-change-request-brief.docx",
-    progress: 0,
-  },
   {
     id: "RA-2304",
     title: "Corporate card controls refresh",
@@ -361,7 +356,6 @@ const changeTypes: Record<string, string[]> = {
   "Limit change": ["Transaction-pattern", "Customer"],
 };
 const changeTypeOf: Record<string, string> = {
-  "RA-2310": "New geography",
   "RA-2304": "New product",
   "RA-2301": "New product",
   "RA-2291": "New geography",
@@ -454,18 +448,6 @@ function useAllAssessments(): Assessment[] {
   return useSyncExternalStore(subscribeAllAssessments, mergeAssessments, mergeAssessments);
 }
 
-function AiBranchBanner() {
-  return (
-    <div className="border-b border-ai/30 bg-ai/10 px-4 py-2 text-center text-[11px] text-ai lg:pl-64">
-      <b>aibranch</b> — live Cursor/Anthropic extraction, drafting, follow-up, and re-review.
-      Residual scores stay deterministic in code. Set{" "}
-      <code className="rounded bg-surface px-1">CURSOR_API_KEY</code> (or{" "}
-      <code className="rounded bg-surface px-1">ANTHROPIC_API_KEY</code>) in{" "}
-      <code className="rounded bg-surface px-1">.env</code>.
-    </div>
-  );
-}
-
 function Pill({
   children,
   tone = "neutral",
@@ -534,7 +516,6 @@ export function AppShell({
   const committeeCount = assessments.filter((a) => a.stage === "Committee").length;
   return (
     <div className="app-backdrop min-h-screen text-foreground">
-      <AiBranchBanner />
       <aside className="frost fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-border/70 p-4 lg:flex">
         <Link to="/" className="flex items-center gap-3 px-1 pb-6">
           <span className="grid size-9 place-items-center rounded-md bg-primary text-primary-foreground">
@@ -695,7 +676,15 @@ export function RiskHome() {
   const { view: viewParam } = homeRoute.useSearch();
   const view: View = viewParam ?? "dashboard";
   useEffect(() => {
+    const retiredDemoId = "RA-2310";
+    removeSubmittedAssessment(retiredDemoId);
+    removeAssessmentStage(retiredDemoId);
+    clearAiAnalysis(retiredDemoId);
     const pending = loadPendingAssessment();
+    if (pending?.assessmentId === retiredDemoId) {
+      clearPendingAssessment();
+      return;
+    }
     if (!pending) return;
     if (getSubmittedAssessment(pending.assessmentId)) return;
     registerSubmittedAssessment({
@@ -2789,6 +2778,7 @@ export function NewAssessmentPage() {
   const [fileError, setFileError] = useState("");
   const [tried, setTried] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedId, setSubmittedId] = useState<string | null>(null);
   const chooseFiles = (files: FileList | null) => {
     if (!files) return;
     const allowed = new Set([
@@ -2851,10 +2841,10 @@ export function NewAssessmentPage() {
             2 days.
           </p>
         </div>
-        {submitted ? (
+        {submitted && submittedId ? (
           <div className="mt-6 rounded-lg border border-success/30 bg-success/10 p-6">
             <Check className="size-6 text-success" />
-            <h2 className="mt-3 font-semibold">Request RA-2310 submitted</h2>
+            <h2 className="mt-3 font-semibold">Request {submittedId} submitted</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {ctype} · {selected.length} source document{selected.length === 1 ? "" : "s"} · owner{" "}
               {owner}
@@ -2875,8 +2865,11 @@ export function NewAssessmentPage() {
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button asChild>
-                <Link to="/assessment/$assessmentId" params={{ assessmentId: "RA-2310" }}>
-                  Open RA-2310 · Start AI
+                <Link
+                  to="/assessment/$assessmentId"
+                  params={{ assessmentId: submittedId ?? "" }}
+                >
+                  Open {submittedId} · Start AI
                   <ChevronRight />
                 </Link>
               </Button>
@@ -3044,14 +3037,20 @@ export function NewAssessmentPage() {
                     setTried(true);
                     if (errList.length) return;
                     const documents = await Promise.all(selected.map(readFileForAiAnalysis));
+                    const knownIds = [
+                      ...assessments.map((a) => a.id),
+                      ...loadSubmittedAssessments().map((r) => r.id),
+                    ];
+                    const assessmentId = nextAssessmentId(knownIds);
                     savePendingAssessment({
-                      assessmentId: "RA-2310",
+                      assessmentId,
                       title: name.trim(),
                       owner: owner.trim(),
                       changeType: ctype,
                       changeSummary: summary.trim(),
                       documents,
                     });
+                    setSubmittedId(assessmentId);
                     setSubmitted(true);
                   })();
                 }}
