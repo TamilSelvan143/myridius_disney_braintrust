@@ -1,0 +1,15 @@
+{
+  "name": "risk-workbench-e2e",
+  "private": true,
+  "description": "Temporary browser-level E2E suite (Playwright) for the Risk Assessment Workbench. Runs against the live preview URL; point BASE_URL at the custom domain when it moves.",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report",
+    "codegen": "playwright codegen $BASE_URL"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
