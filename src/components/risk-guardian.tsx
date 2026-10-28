@@ -2865,10 +2865,7 @@ export function NewAssessmentPage() {
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button asChild>
-                <Link
-                  to="/assessment/$assessmentId"
-                  params={{ assessmentId: submittedId ?? "" }}
-                >
+                <Link to="/assessment/$assessmentId" params={{ assessmentId: submittedId ?? "" }}>
                   Open {submittedId} · Start AI
                   <ChevronRight />
                 </Link>
